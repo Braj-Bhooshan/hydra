@@ -1,23 +1,28 @@
 from typing import Callable, Iterator
+
 import pytorch_lightning as pl
-from torch import Tensor, optim
+from torch import Tensor, nn, optim
 from torchmetrics import Accuracy
-from torch import nn
 
-PARTIAL_OPTIMIZER_TYPE = Callable[[Iterator[nn.parameter]], optim.Optimizer]
+PARTIAL_OPTIMIZER_TYPE = Callable[[Iterator[nn.Parameter]], optim.Optimizer]
 
-class TraingTask(pl.LightningModule):
+
+class TrainingTask(pl.LightningModule):
     def __init__(self, optimizer: PARTIAL_OPTIMIZER_TYPE) -> None:
         super().__init__()
         self.optimizer = optimizer
 
-
-    def configure_optimizer(self) -> optim.Optimizer:
+    def configure_optimizers(self) -> optim.Optimizer:
         return self.optimizer(self.parameters())
 
 
-class MNISTClassification(TraingTask):
-    def __init__(self, model: nn.Module, optimizer: PARTIAL_OPTIMIZER_TYPE, loss_function: nn.Module) -> None:
+class MNISTClassification(TrainingTask):
+    def __init__(
+        self,
+        model: nn.Module,
+        optimizer: PARTIAL_OPTIMIZER_TYPE,
+        loss_function: nn.Module,
+    ) -> None:
         super().__init__(optimizer)
 
         self.model = model
@@ -25,29 +30,34 @@ class MNISTClassification(TraingTask):
 
         nrof_classes = 10
         self.train_accuracy = Accuracy(task="multiclass", num_classes=nrof_classes)
-        self.validation_accuracy = Accuracy(task="multiclass", num_classes=nrof_classes)
+        self.validaiton_accuracy = Accuracy(task="multiclass", num_classes=nrof_classes)
         self.test_accuracy = Accuracy(task="multiclass", num_classes=nrof_classes)
 
     def forward(self, x) -> Tensor:
         return self.model(x)
 
-    def training_step(self, batch, _) -> Tensor:
+    def training_step(self, batch, batch_idx) -> Tensor:
         images, labels = batch
         logits = self(images)
-        loss = self.loss_finction(logits, labels)
-        self.tran_accuracy(logits, labels)
+        loss = self.loss_function(logits, labels)
+        self.train_accuracy(logits, labels)
         self.log("train_loss", loss, on_step=True, on_epoch=True)
         self.log("train_accuracy", self.train_accuracy, on_step=False, on_epoch=True)
         return loss
 
-    def validation_step(self, batch, _):
+    def validation_step(self, batch, batch_idx):
         images, labels = batch
         preds = self(images)
-        self.validation_accuracy(preds, labels)
-        self.log("validation_accuracy", self.validation_accuracy, on_step=False, on_epoch=True)
+        self.validaiton_accuracy(preds, labels)
+        self.log(
+            "validation_accuracy",
+            self.validaiton_accuracy,
+            on_step=False,
+            on_epoch=True,
+        )
 
-    def test_step(self, batch, _):
+    def test_step(self, batch, batch_idx):
         images, labels = batch
         preds = self(images)
         self.test_accuracy(preds, labels)
-        sel.log("test_accuracy", self.test_accuracy, on_step=False, on_epoch=True)
+        self.log("test_accuracy", self.test_accuracy, on_step=False, on_epoch=True)

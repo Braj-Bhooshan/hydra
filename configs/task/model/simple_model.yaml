@@ -3,4 +3,4 @@ defaults:
   - adapter: linear_512_10
   - head: identity_head
 
--target_: models.SimpleModel
+_target_: models.SimpleModel
