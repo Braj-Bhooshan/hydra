@@ -3,4 +3,4 @@ defaults:
   - optimizer: adam
   - loss_function: cross_entropy
 
-_target_: task.MNISTClassification
+_target_: tasks.MNISTClassification
